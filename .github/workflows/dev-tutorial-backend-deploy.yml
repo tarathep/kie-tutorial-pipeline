@@ -1,0 +1,55 @@
+name: DEV - Tutorial Backend Deploy
+
+on:
+  repository_dispatch:
+    types: [kie-tutorial-backend-cd-dev]
+  workflow_dispatch:
+
+env:
+  REPOSITORY: "tarathep/kie-tutorial-backend"
+  APP_NAME: kie-tutorial-backend
+  AZURE_WEB_APP_NAME: app-kie-tutorial-backend-dev-001
+  CONTAINER_REPOSITORY: "acrkietutorial001.azurecr.io"
+  IMAGE_TAG: "0.0.1-SNAPSHOT"
+
+jobs:
+  build-and-deploy-app-service:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+    - name: "Checkout pipelines"
+      uses: actions/checkout@v2
+    
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_RBAC_CREDENTIALS }}
+        allow-no-subscriptions: true
+    
+    - name: 'Set subscription'
+      run: az account set --subscription 1d00f364-f62c-4896-a77d-e24d36e7d9c8
+    
+    - name: "Deploy to Azure WebApp"
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEB_APP_NAME }}
+        images: '${{ env.CONTAINER_REPOSITORY }}/${{ env.APP_NAME }}:${{env.IMAGE_TAG}}'
+
+    - name: Set Web App Settings
+      uses: Azure/appservice-settings@v1
+      with:
+        app-name: ${{ env.AZURE_WEB_APP_NAME }}
+        app-settings-json: |
+          [
+            {
+              "name": "MONGODB_CONNECTION_STRING",
+              "value": "mongodb://cosmos-kie-tutorial-dev-001:QW5GQQmZVNuAIyGpP43fNAK5aTi8gCbkMhurjHYspHsEszD87hI3KRaMZTP2DUtL3KZ5HyRhoOe4ynECVYI2Eg==@cosmos-kie-tutorial-dev-001.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@cosmos-kie-tutorial-dev-001@",
+              "slotSetting": false
+            },
+            {
+              "name": "PORT",
+              "value": "80",
+              "slotSetting": false
+            }
+          ]
