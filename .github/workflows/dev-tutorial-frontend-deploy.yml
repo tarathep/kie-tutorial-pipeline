@@ -1,0 +1,50 @@
+name: DEV - Tutorial Frontend Deploy
+
+on:
+  repository_dispatch:
+    types: [kie-tutorial-frontend-cd-dev]
+  workflow_dispatch:
+
+env:
+  REPOSITORY: "tarathep/kie-tutorial-frontend"
+  APP_NAME: kie-tutorial-frontend
+  AZURE_WEB_APP_NAME: app-kie-tutorial-frontend-dev-001
+  CONTAINER_REPOSITORY: "acrkietutorial001.azurecr.io"
+  IMAGE_TAG: "0.0.1-SNAPSHOT"
+
+jobs:
+  build-and-deploy-app-service:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+    - name: "Checkout pipelines"
+      uses: actions/checkout@v2
+    
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_RBAC_CREDENTIALS }}
+        allow-no-subscriptions: true
+    
+    - name: 'Set subscription'
+      run: az account set --subscription 1d00f364-f62c-4896-a77d-e24d36e7d9c8
+    
+    - name: "Deploy to Azure WebApp"
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEB_APP_NAME }}
+        images: '${{ env.CONTAINER_REPOSITORY }}/${{ env.APP_NAME }}:${{env.IMAGE_TAG}}'
+
+    - name: Set Web App Settings
+      uses: Azure/appservice-settings@v1
+      with:
+        app-name: ${{ env.AZURE_WEB_APP_NAME }}
+        app-settings-json: |
+          [
+            {
+              "name": "VUE_APP_ENPOINT_API_BACKEND",
+              "value": "https://app-kie-tutorial-backend-dev-001.azurewebsites.net/api",
+              "slotSetting": false
+            }
+          ]
